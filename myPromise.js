@@ -6,7 +6,9 @@ const state = {
 }
 const noop = () => {};
 const GLOBAL_ERROR = null;
-const getType = Object.prototype.toString.call;
+export const getType = Object.prototype.toString.call;
+
+
 
 class Promise {
   constructor(fn) {
@@ -20,6 +22,7 @@ class Promise {
     if (fn === noop) return;
     doResolve(fn, this);
   }
+  // for other not promise object to use then method
   then(onFulfilled, onRejected) {
     if (this.constructor !== Promise) {
       return safeThen(this, onFulfilled, onRejected);
@@ -44,19 +47,21 @@ class Handler {
   }
 }
 const doResolve = (fn, promise) => {
+  // finish flag
   let done = false;
-  let res = tryCall(fn, 
+  // result of fn(resolve,reject)
+  let res = tryCall(fn,
     resolve_value => {
-    if (done) return;
-    done = true;
-    resolve(promise, resolve_value);
+      if (done) return;
+      done = true;
+      resolve(promise, resolve_value);
     },
     reject_reason => {
-      if(done) return;
+      if (done) return;
       done = true;
       reject(promise, reject_reason);
     })
-  if(!done && res === IS_ERROR) {
+  if (!done && res === IS_ERROR) {
     done = true;
     reject(promise, GLOBAL_ERROR);
   }
@@ -90,14 +95,14 @@ const finale = promise => {
   if (promise._deferredState === state["1"]) {
     handle(promise, promise._deferreds);
   } else if (promise._deferredState === state["2"]) {
-    Array.prototype.forEach(promise._deferreds, defer => handle(promise,defer))
+    Array.prototype.forEach(promise._deferreds, defer => handle(promise, defer))
   }
   promise._deferreds = null;
 }
 const getThen = obj => {
   try {
     return obj.then;
-  } catch(err) {
+  } catch (err) {
     GLOBAL_ERROR = err;
     return IS_ERROR;
   }
@@ -105,19 +110,19 @@ const getThen = obj => {
 const tryCall = (fn, ...args) => {
   try {
     return fn(...args)
-  } catch(err) {
+  } catch (err) {
     GLOBAL_ERROR = err;
     return IS_ERROR;
   }
 }
 const handle = (promise, deferred) => {
-  while(promise._state === state["3"]) {
+  while (promise._state === state["3"]) {
     promise = promise._value
   }
   if (promise._onHandle) {
     Promise._onHandle(promise);
   }
-  if(promise._state === state["0"]) {
+  if (promise._state === state["0"]) {
     if (promise._deferredState = state["0"]) {
       promise._deferredState = state["1"];
       promise._deferreds = deferred
@@ -134,6 +139,5 @@ const handle = (promise, deferred) => {
 }
 
 const handleResolved = (promise, deferred) => {
-  
-}
 
+}
