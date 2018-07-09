@@ -5,6 +5,7 @@ import {
 // use 'self' and 'global' instead of 'window' for both frame and worker
 let scope = getType(global) !== '[object Undefined]' ? global : self;
 let BrowserMutationObserver = scope.MutationObserver || scope.WebkitMutationObserver;
+let freeTask = [];
 let requestFlush, index, queue = [],
   flushing = false;
 
@@ -24,19 +25,20 @@ if (getType(BrowserMutationObserver) === '[object Function]') {
 }
 
 const makeRequestCallFromMutationObserver = callback => {
-  let fake_data = 1;
+  let fake_data = true;
   let observer = new BrowserMutationObserver(callback)
   let node = document.createTextNode('');
+  // observe data change
   observer.observer(node, {
     characterData: true
   });
-  // change fakedata to make trigger observer callback
+  // change fakedata to make trigger observer callback which will be queued in microtask
   return function requestCall() {
-    fake_data = -fake_data;
+    fake_data = !fake_data;
     node.data = fake_data;
   }
 }
-// for not suppert DOM Mutation
+// for not support DOM Mutation
 const makeRequestCallFromTimer = callback => {
   return function requestCall() {
     let timeoutHandle = setTimeout(handleTimer, 0);
@@ -49,9 +51,6 @@ const makeRequestCallFromTimer = callback => {
     }
   }
 }
-
-
-let freeTask = [];
 
 class RawTask {
   constructor() {
@@ -73,7 +72,7 @@ class RawTask {
     }
   }
 }
-const asap = (task) => {
+export const asap = (task) => {
   let rawTask;
   if (freeTask.length) {
     rawTask = freeTask.pop()
@@ -86,12 +85,13 @@ const asap = (task) => {
 
 export class rawAsap {
   constructor(task) {
-    if (!queue.length) {
+    if (!queue.length && flushing === false) {
       requestFlush();
       // make sure single flush at same time
       flushing = true;
     }
     queue.push(task);
+    flushing = false;
   }
   static makeRequestCallFromTimer = makeRequestCallFromTimer;
   static requestFlush = requestFlush;

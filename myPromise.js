@@ -1,3 +1,4 @@
+import { asap } from './asap';
 const state = {
   0: 'pending',
   1: 'fulfilled',
@@ -139,5 +140,12 @@ const handle = (promise, deferred) => {
 }
 
 const handleResolved = (promise, deferred) => {
-
-}
+  asap(() => {
+    let cb = promise._deferredState === 1 ? deferred.onFulfilled : deferred.onRejected;
+    if (!cb) {
+      return promise._state === 1 ? resolve(deferred.promise, promise._value) : reject(deferred.promise, promise._value);
+    }
+    let ret = tryCall(cb, promise._value);
+    ret === IS_ERROR ? reject(deferred.promise, promise._value) : resole(deferred.promise, promise._value);
+  })
+};
