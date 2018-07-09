@@ -5,13 +5,13 @@ const state = {
   2: 'rejected',
   3: 'adopted the state of another promise'
 }
+// define empty function to new Promise
 const noop = () => {};
-const GLOBAL_ERROR = null;
-export const getType = Object.prototype.toString.call;
-
-
-
-class Promise {
+// get and set global ERROR
+const GLOBAL_ERROR = null, IS_ERROR = {};
+// evaluate data type
+const getType = Object.prototype.toString.bind(null)
+class MyPromise {
   constructor(fn) {
     this._deferredState = state["0"];
     this._state = state["0"];
@@ -21,24 +21,26 @@ class Promise {
       throw new TypeError('Promise constructor\'s argument is not a function');
     }
     if (fn === noop) return;
+    // start resolve promise sync
     doResolve(fn, this);
   }
-  // for other not promise object to use then method
   then(onFulfilled, onRejected) {
-    if (this.constructor !== Promise) {
-      return safeThen(this, onFulfilled, onRejected);
+    // for other not promise object to use then method
+    if (this.constructor !== MyPromise) {
+      return this.safeThen(this, onFulfilled, onRejected);
     }
-    let promise = new Promise(noop);
+    // new an empty promise with fulfill and reject to handle this promise
+    let promise = new MyPromise(noop);
     handle(this, new Handler(onFulfilled, onRejected, promise));
     return promise;
   }
-}
-const safeThen = (self, onFulfilled, onRejected) => {
-  return new self.constructor((resolve, reject) => {
-    let promise = new Promise(noop);
-    promise.then(resolve, reject);
-    handle(self, new Handler(onFulfilled, onRejected, promise))
-  })
+  safeThen(self, onFulfilled, onRejected) {
+    return new self.constructor((resolve, reject) => {
+      let promise = new MyPromise(noop);
+      promise.then(resolve, reject);
+      handle(self, new Handler(onFulfilled, onRejected, promise))
+    })
+  }
 }
 class Handler {
   constructor(onFulfilled, onRejected, promise) {
@@ -50,8 +52,9 @@ class Handler {
 const doResolve = (fn, promise) => {
   // finish flag
   let done = false;
+  console.log('doing resolve')
   // result of fn(resolve,reject)
-  let res = tryCall(fn,
+  let res = tryCallTwo(fn,
     resolve_value => {
       if (done) return;
       done = true;
@@ -68,28 +71,37 @@ const doResolve = (fn, promise) => {
   }
 }
 const resolve = (promise, value) => {
+  console.log(value)
   if (/[Object|Function]/.test(getType(value))) {
-    let then = getThen(value);
-    if (then instanceof IS_ERROR) return reject(promise, GLOBAL_ERROR);
-  }
-  if (then === promise.then && value instanceof Promise) {
-    promise._state = state["3"];
+    let then = value => {
+      try {
+        return value.then;
+      } catch (err) {
+        GLOBAL_ERROR = err;
+        debugger;
+        return IS_ERROR;
+      }
+    }
+    if (then === IS_ERROR) return reject(promise, GLOBAL_ERROR);
+    if (then === promise.then && value instanceof MyPromise) {
+      promise._state = state["3"];
+      promise._value = value;
+      finale(promise);
+      return;
+    } else if (getType(then) === '[object Function]') {
+      doResolve(then.bind(value), promise);
+      return;
+    }
+    promise._state = state["1"];
     promise._value = value;
-    finale(promise);
-    return;
-  } else if (getType(then) === '[object Function]') {
-    doResolve(then.bind(value), promise);
-    return;
+    finale(promise)
   }
-  promise._state = state["1"];
-  promise._value = value;
-  finale(promise)
 }
 
 const reject = (promise, value) => {
   promise._state = state["2"];
   promise._value = value;
-  Promise._onReject && Promise._onReject(promise, value);
+  MyPromise._onReject && MyPromise._onReject(promise, value);
 }
 
 const finale = promise => {
@@ -100,28 +112,30 @@ const finale = promise => {
   }
   promise._deferreds = null;
 }
-const getThen = obj => {
+
+const tryCallTwo = (fn, arg1, arg2) => {
   try {
-    return obj.then;
+    return fn(arg1, arg2)
   } catch (err) {
     GLOBAL_ERROR = err;
     return IS_ERROR;
   }
 }
-const tryCall = (fn, ...args) => {
+const tryCallOne = (fn, arg) => {
   try {
-    return fn(...args)
+    return fn(arg)
   } catch (err) {
     GLOBAL_ERROR = err;
     return IS_ERROR;
   }
 }
 const handle = (promise, deferred) => {
+  console.log(promise._state)
   while (promise._state === state["3"]) {
     promise = promise._value
   }
   if (promise._onHandle) {
-    Promise._onHandle(promise);
+    MyPromise._onHandle(promise);
   }
   if (promise._state === state["0"]) {
     if (promise._deferredState = state["0"]) {
@@ -141,11 +155,13 @@ const handle = (promise, deferred) => {
 
 const handleResolved = (promise, deferred) => {
   asap(() => {
-    let cb = promise._deferredState === 1 ? deferred.onFulfilled : deferred.onRejected;
+    let cb = promise._deferredState === state["1"] ? deferred.onFulfilled : deferred.onRejected;
     if (!cb) {
-      return promise._state === 1 ? resolve(deferred.promise, promise._value) : reject(deferred.promise, promise._value);
+      return promise._state === state["1"] ? resolve(deferred.promise, promise._value) : reject(deferred.promise, promise._value);
     }
-    let ret = tryCall(cb, promise._value);
+    let ret = tryCallOne(cb, promise._value);
     ret === IS_ERROR ? reject(deferred.promise, promise._value) : resole(deferred.promise, promise._value);
   })
 };
+
+window.MyPromise = MyPromise;

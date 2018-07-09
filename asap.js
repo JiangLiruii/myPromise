@@ -1,30 +1,38 @@
-import {
-  getType
-} from './myPromise';
-
 // use 'self' and 'global' instead of 'window' for both frame and worker
+const getType = Object.prototype.toString.bind(null);
 let scope = getType(global) !== '[object Undefined]' ? global : self;
 let BrowserMutationObserver = scope.MutationObserver || scope.WebkitMutationObserver;
 let freeTask = [];
-let requestFlush, index, queue = [],
+let requestFlush, index, queue = [],pendingError = [],
   flushing = false;
 
+
+
 const flush = () => {
-  for (index = queue.length; index > 0; index--) {
+  for (index = queue.length - 1; index >= 0; index--) {
     let currentIndex = index;
     queue[currentIndex].call();
   }
   queue = [];
   flushing = false
 }
-if (getType(BrowserMutationObserver) === '[object Function]') {
-  requestFlush = makeRequestCallFromMutationObserver(flush)
-} else {
-  // if not support DOM Mutation
-  requestFlush = makeRequestCallFromTimer(flush)
+
+// for not support DOM Mutation
+const makeRequestCallFromTimer = callback => {
+  return function requestCall() {
+    let timeoutHandle = setTimeout(handleTimer, 0);
+    // for firefox worker
+    let intervalHandle = setInterval(handleTimer, 50);
+    function handleTimer(){
+      clearTimeout(timeoutHandle);
+      clearInterval(intervalHandle);
+      callback()
+    }
+  }
 }
 
 const makeRequestCallFromMutationObserver = callback => {
+  console.log(123);
   let fake_data = true;
   let observer = new BrowserMutationObserver(callback)
   let node = document.createTextNode('');
@@ -38,18 +46,12 @@ const makeRequestCallFromMutationObserver = callback => {
     node.data = fake_data;
   }
 }
-// for not support DOM Mutation
-const makeRequestCallFromTimer = callback => {
-  return function requestCall() {
-    let timeoutHandle = setTimeout(handleTimer, 0);
-    // for firefox worker
-    let intervalHandle = setInterval(handleTimer, 50);
-    const handleTimer = () => {
-      clearTimeout(timeoutHandle);
-      clearInterval(intervalHandle);
-      callback()
-    }
-  }
+
+if (getType(BrowserMutationObserver) === '[object Function]') {
+  requestFlush = makeRequestCallFromMutationObserver(flush)
+} else {
+  // if not support DOM Mutation
+  requestFlush = makeRequestCallFromTimer(flush)
 }
 
 class RawTask {
@@ -64,7 +66,7 @@ class RawTask {
       if (asap.onError) {
         asap.onError(err);
       } else {
-        pendingError.push(err);
+        pendingError.push(err)
         requestErrorThrow();
       }
     } finally {
@@ -80,9 +82,14 @@ export const asap = (task) => {
     rawTask = new RawTask();
   }
   rawTask.task = task;
-  rawAsap(rawTask);
+  new rawAsap(rawTask);
 }
-
+function throwFirstError() {
+  if (pendingError.lengt){
+    throw pendingError.shift()
+  };
+}
+var requestErrorThrow = makeRequestCallFromTimer(throwFirstError);
 export class rawAsap {
   constructor(task) {
     if (!queue.length && flushing === false) {
@@ -93,6 +100,6 @@ export class rawAsap {
     queue.push(task);
     flushing = false;
   }
-  static makeRequestCallFromTimer = makeRequestCallFromTimer;
-  static requestFlush = requestFlush;
 }
+rawAsap.makeRequestCallFromTimer = makeRequestCallFromTimer;
+rawAsap.requestFlush = requestFlush;

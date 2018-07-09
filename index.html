@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+</head>
+<body>
+  <script src="bundle.js"></script>
+  <script>
+  function getUserId() {
+    return new Promise(function (resolve) {
+        resolve(9876);
+    });
+  }
+
+  function getUserJobById(id) {
+    return new Promise(function (resolve) {
+      setTimeout(function(){
+        console.log(id) // 9876
+        resolve(123)
+      }, 2000)
+    });
+  }
+
+  getUserId().then(getUserJobById) // promise
+  .then(function (job) {
+    console.log(job) // 123
+  });
+  </script>
+</body>
+</html>
