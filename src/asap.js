@@ -33,10 +33,10 @@ const flush = () => {
 
 const makeRequestCallFromMutationObserver = callback => {
   let fake_data = true;
-  let observer = new BrowserMutationObserver(callback)
+  let observer = new BrowserMutationObserver(callback);
   let node = document.createTextNode('');
   // observe data change
-  observer.observer(node, {
+  observer.observe(node, {
     characterData: true
   });
   // change fakedata to make trigger observer callback which will be queued in microtask
