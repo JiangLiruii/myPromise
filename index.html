@@ -7,27 +7,8 @@
   <title>Document</title>
 </head>
 <body>
+  <div id="show"></div>
   <script src="bundle.js"></script>
-  <script>
-  function getUserId() {
-    return new Promise(function (resolve) {
-        resolve(9876);
-    });
-  }
-
-  function getUserJobById(id) {
-    return new Promise(function (resolve) {
-      setTimeout(function(){
-        console.log(id) // 9876
-        resolve(123)
-      }, 2000)
-    });
-  }
-
-  getUserId().then(getUserJobById) // promise
-  .then(function (job) {
-    console.log(job) // 123
-  });
-  </script>
+  <script src="example.js"></script>
 </body>
 </html>
