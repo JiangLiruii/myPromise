@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-  entry: './core.js',
+  entry: './src/core.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.js'
@@ -11,14 +11,9 @@ module.exports = {
       {
         test: /\.js$/,
         exclude: /(node_modules|bower_components)/,
-        loader: 'babel-loader',
-        // use: {
-        //   loader: 'babel-loader',
-        //   options: {
-        //   }
-        // }
+        loader: 'babel-loader'
       }
     ]
   },
-  devtool: 'source-map'
+  devtool: 'source-map',
 };

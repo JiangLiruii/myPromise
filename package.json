@@ -2,9 +2,11 @@
   "name": "mypromise",
   "version": "1.0.0",
   "description": "",
-  "main": "myPromise.js",
+  "main": "src/core.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --bail --compilers js:babel-core/register --timeout 200 --slow 99999",
+    "start": "webpack-dev-server",
+    "pretest": "node build"
   },
   "repository": {
     "type": "git",
