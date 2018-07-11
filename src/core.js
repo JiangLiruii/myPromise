@@ -25,6 +25,33 @@ class Promise {
         handle(this, new Handler(onFulfilled, onRejected, res))
         return res;
     }
+    done(onFulfilled, onRejected) {
+        // make new promise which state always to be 0, for no resolve at all;
+        let promise = arguments.length ? this.then.apply(this, arguments) : this;
+        // set onRejected
+        promise.then(null,err => setTimeout(()=> {throw err}, 0));
+    }
+}
+Promise.resolve = (value) =>{
+    // create new promise and put it in resolved statue
+    function valueTopromise(value) {
+        let p = new Promise(noop);
+        p.state = 1;
+        p.value = value;
+        return p;
+    }
+    if (value instanceof Promise) return value;
+    if ([null, undefined, true, false, 0, ''].indexOf(value) !== -1) return valueTopromise(value);
+    if (typeof value === 'object' || typeof value === 'function') {
+        let then = getThen(value);
+        if (then === IS_ERROR) {
+            return new Promise((resolve, reject) => reject(GLOBAL_ERROR));
+        }
+        if (typeof then === 'function') {
+            return new Promise(then.bind(value));
+        }
+    }
+    return valueTopromise(value)
 }
 class Handler{
     constructor(onFulfilled, onRejected, promise) {
