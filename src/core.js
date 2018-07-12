@@ -20,6 +20,10 @@ class Promise {
         if( fn === noop ) return;
         doResolve(fn, this)
     }
+    /**
+     * then chain call eg. a.then(b).then(c)
+     * a.then(b) return res.then(c)
+     */
     then(onFulfilled, onRejected) {
         let res = new Promise(noop);
         handle(this, new Handler(onFulfilled, onRejected, res))
@@ -61,17 +65,19 @@ class Handler{
     }
 }
 function handle(promise, defer) {
+    // if promise.value is a promise, the new resolved promise will assign to it until not promise anymore.
     while (promise.state === 3) {
-        // the promise.value is one promise two which assign to it in resolve method
         promise = promise.value
     }
-    // for extend
-    if (Promise._onHandle){};
+    // for handle extend
+    if (Promise._onHandle){Promise._onHandle(promise)};
     // if state is pending
     if (promise.state === 0) {
+        // add defer including callback in defers queue
         promise.defers.push(defer)
         return;
     }
+    // async call
     handleResolve(promise, defer)
 }
 
